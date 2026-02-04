@@ -1,32 +1,54 @@
 # MS-Graph-BlueTeam
 
-[Microsoft Graph](https://developer.microsoft.com/en-us/graph) CLI commands and workflows for Blue Teamers
+[Microsoft Graph](https://developer.microsoft.com/en-us/graph) PowerShell SDK commands and workflows for Blue Teamers
 
-## MS Graph CLI
+## Microsoft Graph PowerShell SDK
 
 ### Requirements
 
-1. Install the [MS Graph CLI](https://learn.microsoft.com/en-us/graph/cli/installation?tabs=windows) toolkit.
+1. Install the [Microsoft Graph PowerShell SDK](https://learn.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0).
 2. Requisite licenses for certain API endpoints, i.e., Microsoft Defender for Threat Intelligence.
+
+### Installation
+
+```powershell
+Install-Module Microsoft.Graph -Scope CurrentUser
+```
+
+For threat intelligence features, you may also need the beta module:
+```powershell
+Install-Module Microsoft.Graph.Beta -Scope CurrentUser
+```
+
+### Command Discovery
+
+To find available Microsoft Graph PowerShell cmdlets, use:
+```powershell
+# Find commands related to security
+Get-Command -Module Microsoft.Graph.Security
+
+# Discover cmdlet equivalents
+Find-MgGraphCommand -Command 'threat'
+```
 
 ### Microsoft Defender for Threat Intelligence
 
-#### Login and configure MDTI Scope
+#### Connect and configure MDTI Scope
 
-```bash
-mgc login --strategy DeviceCode --scopes ThreatIntelligence.Read.All
+```powershell
+Connect-MgGraph -Scopes "ThreatIntelligence.Read.All"
 ```
 
 #### Whois
 
-```bash
-mgc security threat-intelligence hosts whois get --host-id contoso.com
+```powershell
+Get-MgSecurityThreatIntelligenceHostWhois -HostId "contoso.com"
 ```
 
 ##### Convert MDTI WHOIS to a MISP Object
 
 ```PowerShell
-function ConvertTo-MispObject($whoisJson) {
+function ConvertTo-MispObject($whoisData) {
     $mispObject = @{
         "name" = "whois"
         "meta-category" = "network"
@@ -34,29 +56,29 @@ function ConvertTo-MispObject($whoisJson) {
         "template_uuid" = "688c46fb-5edb-40a3-8273-1af7923e2215"
         "template_version" = "4"
         "Attribute" = @(
-            @{ "type" = "datetime"; "object_relation" = "expiration-date"; "value" = $whoisJson.expirationDateTime }
-            @{ "type" = "datetime"; "object_relation" = "creation-date"; "value" = $whoisJson.registrationDateTime }
-            @{ "type" = "text"; "object_relation" = "registrar"; "value" = $whoisJson.registrar.organization }
-            @{ "type" = "text"; "object_relation" = "registrant"; "value" = $whoisJson.registrant.organization }
-            @{ "type" = "text"; "object_relation" = "registrant-phone"; "value" = $whoisJson.registrant.telephone }
-            @{ "type" = "email"; "object_relation" = "registrant-email"; "value" = $whoisJson.registrant.email }
-            @{ "type" = "text"; "object_relation" = "registrant-address"; "value" = $whoisJson.registrant.address.street }
-            @{ "type" = "text"; "object_relation" = "domain-status"; "value" = $whoisJson.domainStatus }
-            @{ "type" = "text"; "object_relation" = "whois-server"; "value" = $whoisJson.whoisServer }
-            @{ "type" = "text"; "object_relation" = "raw-record"; "value" = $whoisJson.rawWhoisText }
+            @{ "type" = "datetime"; "object_relation" = "expiration-date"; "value" = $whoisData.ExpirationDateTime }
+            @{ "type" = "datetime"; "object_relation" = "creation-date"; "value" = $whoisData.RegistrationDateTime }
+            @{ "type" = "text"; "object_relation" = "registrar"; "value" = $whoisData.Registrar.Organization }
+            @{ "type" = "text"; "object_relation" = "registrant"; "value" = $whoisData.Registrant.Organization }
+            @{ "type" = "text"; "object_relation" = "registrant-phone"; "value" = $whoisData.Registrant.Telephone }
+            @{ "type" = "email"; "object_relation" = "registrant-email"; "value" = $whoisData.Registrant.Email }
+            @{ "type" = "text"; "object_relation" = "registrant-address"; "value" = $whoisData.Registrant.Address.Street }
+            @{ "type" = "text"; "object_relation" = "domain-status"; "value" = $whoisData.DomainStatus }
+            @{ "type" = "text"; "object_relation" = "whois-server"; "value" = $whoisData.WhoisServer }
+            @{ "type" = "text"; "object_relation" = "raw-record"; "value" = $whoisData.RawWhoisText }
         )
     }
 
-    for ($i = 0; $i -lt $whoisJson.nameservers.Count; $i++) {
-        $mispObject.Attribute += @{ "type" = "hostname"; "object_relation" = "nameserver-$($i + 1)"; "value" = $whoisJson.nameservers[$i].host.id }
+    for ($i = 0; $i -lt $whoisData.Nameservers.Count; $i++) {
+        $mispObject.Attribute += @{ "type" = "hostname"; "object_relation" = "nameserver-$($i + 1)"; "value" = $whoisData.Nameservers[$i].Host.Id }
     }
 
     return $mispObject
 }
 
-$whoisJson = mgc security threat-intelligence hosts whois get --host-id contoso.com | ConvertFrom-Json
+$whoisData = Get-MgSecurityThreatIntelligenceHostWhois -HostId "contoso.com"
 
-$mispObject = ConvertTo-MispObject -whoisJson $whoisJson
+$mispObject = ConvertTo-MispObject -whoisData $whoisData
 
 # Print the MISP object
 $mispObject | ConvertTo-Json -Depth 10
@@ -64,24 +86,24 @@ $mispObject | ConvertTo-Json -Depth 10
 
 #### Domain Reputation
 
-```bash
-mgc security threat-intelligence hosts reputation get --host-id contoso.com
+```powershell
+Get-MgSecurityThreatIntelligenceHostReputation -HostId "contoso.com"
 ```
 
 #### Reverse DNS
 
-```bash
-mgc security threat-intelligence hosts passive-dns-reverse list --host-id contoso.com
+```powershell
+Get-MgSecurityThreatIntelligenceHostPassiveDnsReverse -HostId "contoso.com"
 ```
 
-#### View results with JSON Crackin VSCode
+#### View results with JSON Crack in VSCode
 
 ##### Pre-requisites
 
 [JSON Crack VSCode Extension](https://marketplace.visualstudio.com/items?itemName=AykutSarac.jsoncrack-vscode)
 
-```bash
-mgc security threat-intelligence hosts whois get --host-id contoso.com > contoso_whois.json; code contoso_whois.json
+```powershell
+Get-MgSecurityThreatIntelligenceHostWhois -HostId "contoso.com" | ConvertTo-Json -Depth 10 | Out-File "contoso_whois.json"; code "contoso_whois.json"
 ```
 
 ```bash
@@ -96,41 +118,46 @@ ENTER
 
 Search articles for a keyword, provide a count and only return the article ID and Title.
 
-```bash
-mgc security threat-intelligence articles list --select title --search "Confluence" --count "true"
+```powershell
+Get-MgSecurityThreatIntelligenceArticle -Filter "contains(title,'Confluence')" -Select "id,title" -CountVariable resultCount
+Write-Host "Found $resultCount articles"
 ```
 
-Return the results as table
+Return the results as a formatted table:
 
-```bash
-mgc security threat-intelligence articles list --search "Confluence" --count "true" --output TABLE
+```powershell
+Get-MgSecurityThreatIntelligenceArticle -Filter "contains(title,'Confluence')" -Select "id,title" | Format-Table -AutoSize
 ```
 
 #### List indicators for a Threat Intel Article
 
-```bash
-mgc security threat-intelligence articles indicators list --article-id <id>
+```powershell
+Get-MgSecurityThreatIntelligenceArticleIndicator -ArticleId "<id>"
 ```
 
 #### Render a Threat Intel Article as Markdown in the terminal (PowerShell)
 
 ```PowerShell
-$articleObject = mgc security threat-intelligence articles get --article-id "<id>" | ConvertFrom-Json
-$articleObject.body.content | Show-Markdown
+$articleObject = Get-MgSecurityThreatIntelligenceArticle -ArticleId "<id>"
+$articleObject.Body.Content | Show-Markdown
 ```
 
 ### M365 Defender
 
-#### Login and configure M365D Scope
+#### Connect and configure M365D Scope
 
-```bash
-mgc login --strategy DeviceCode --scopes ThreatHunting.Read.All
+```powershell
+Connect-MgGraph -Scopes "ThreatHunting.Read.All"
 ```
 
 #### Run an Advanced Hunting Query
 
-```bash
-mgc security microsoft-graph-security-run-hunting-query post --body '{"Query":"DeviceProcessEvents | where InitiatingProcessFileName =~ \"powershell.exe\" | project Timestamp, FileName, InitiatingProcessFileName | order by Timestamp desc | limit 2"}'
+```powershell
+$Query = @{
+    Query = 'DeviceProcessEvents | where InitiatingProcessFileName =~ "powershell.exe" | project Timestamp, FileName, InitiatingProcessFileName | order by Timestamp desc | limit 2'
+}
+
+Invoke-MgSecurityRunHuntingQuery -BodyParameter $Query
 ```
 
 #### Run an Advanced Hunting Query from the Microsoft Sentinel Github Repo
@@ -138,13 +165,19 @@ mgc security microsoft-graph-security-run-hunting-query post --body '{"Query":"D
 ```PowerShell
 Import-Module powershell-yaml
 
-$jsonObject = ConvertTo-Json -InputObject @{ Query = (ConvertFrom-Yaml (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Hunting%20Queries/Microsoft%20365%20Defender/Troubleshooting/Connectivity%20Failures%20by%20Device.yaml")).query }
+$yamlContent = Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Hunting%20Queries/Microsoft%20365%20Defender/Troubleshooting/Connectivity%20Failures%20by%20Device.yaml"
+$parsedYaml = ConvertFrom-Yaml $yamlContent.Content
 
-mgc security microsoft-graph-security-run-hunting-query post --body $jsonObject
+$Query = @{
+    Query = $parsedYaml.query
+}
+
+Invoke-MgSecurityRunHuntingQuery -BodyParameter $Query
 ```
-or save the results as a PSCustom Object
+
+or save the results as a PowerShell object:
 
 ```PowerShell
-$result = mgc security microsoft-graph-security-run-hunting-query post --body $jsonObject | ConvertFrom-Json
-$result.results
+$result = Invoke-MgSecurityRunHuntingQuery -BodyParameter $Query
+$result.Results
 ```
