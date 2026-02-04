@@ -39,7 +39,7 @@ Connect-MgGraph -Scopes "ThreatIntelligence.Read.All"
 #### Whois
 
 ```powershell
-Get-MgSecurityThreatIntelligenceHostWhois -HostId "contoso.com"
+Get-MgSecurityThreatIntelligenceHostWhoi -HostId "contoso.com"
 ```
 
 ##### Convert MDTI WHOIS to a MISP Object
