@@ -26,9 +26,6 @@ To find available Microsoft Graph PowerShell cmdlets, use:
 ```powershell
 # Find commands related to security
 Get-Command -Module Microsoft.Graph.Security
-
-# Discover cmdlet equivalents
-Find-MgGraphCommand -Command 'threat'
 ```
 
 ### Microsoft Defender for Threat Intelligence
